@@ -17,6 +17,7 @@ async function start_me_up(){
     
 }
 
+
 async function get_url(page_path) {
     const PAGE_URL = new URL(window.location)
 

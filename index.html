@@ -1,0 +1,31 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html b:version='2' class='v2' expr:dir='data:blog.languageDirection' xmlns='http://www.w3.org/1999/xhtml' xmlns:b='http://www.google.com/2005/gml/b' xmlns:data='http://www.google.com/2005/gml/data' xmlns:expr='http://www.google.com/2005/gml/expr'>
+<head>
+  <title>SQL-Book</title>   
+<script> 
+const SERVER="web"
+async function get_system(){  
+    // coded for local development.  Do not post this function to the blog
+    const url = new URL(window.location)
+    const response = await fetch(`${url.protocol}//${url.host}/src/system.js`)
+    const page = await response.text();
+  
+    const js = document.createElement(`script`)
+    js.id="new-script"
+    js.replaceChildren(page)
+    document.getElementsByTagName(`head`)[0].appendChild(js)    
+    INITIAL_FUNCTION()
+} 
+</script>                
+</head>
+<!------------------------------------------------------
+  Do not add stuff here. Every single request for data
+  brings the template code, and this is the local copy
+  of the template.
+
+  Stuff put in start_me_up only gets loaded when the 
+  site is refreshed.
+------------------------------------------------------->
+<body onload='get_system()'>
+</body>
+</html>
