@@ -3,18 +3,18 @@
 <head>
   <title>SQL-Book</title>   
 <script> 
-const SERVER="web"
 async function get_system(){  
     // coded for local development.  Do not post this function to the blog
     const url = new URL(window.location)
-    const response = await fetch(`${url.protocol}//${url.host}/src/system.js`)
+    console.log("now fetching",`${url.protocol}//${url.host}/engine/system.js`)
+    const response = await fetch(`${url.protocol}//${url.host}/engine/system.js`)
     const page = await response.text();
   
     const js = document.createElement(`script`)
     js.id="new-script"
     js.replaceChildren(page)
     document.getElementsByTagName(`head`)[0].appendChild(js)    
-    INITIAL_FUNCTION()
+    initialize("web")
 } 
 </script>                
 </head>
