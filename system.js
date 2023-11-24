@@ -2,9 +2,57 @@ const GLOBALS={
   blogger:false
 }
 
-const PAGE_URL = new URL(window.location)
+
 async function initialize(platform="web"){
     GLOBALS.blogger=platform==="blogger"
+
+
+
+    add_to_head("link",{
+      id:"google-fonts",
+      href:'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200',
+      rel:'stylesheet'
+    })
+  
+    // add_to_head("script",{
+    //   id:"prism-1",
+    //   src:'https://cdnjs.cloudflare.com/ajax/libs/prism/1.23.0/components/prism-core.min.js'
+    // })
+  
+    // add_to_head("script",{
+    //   id:"prism-2",
+    //   src:"https://cdnjs.cloudflare.com/ajax/libs/prism/1.23.0/plugins/autoloader/prism-autoloader.min.js"
+    // })
+  
+    // add_to_head("script",{
+    //   id:"sqlite",
+    //   crossorigin:'anonymous',
+    //   integrity:'sha512-n7swEtVCvXpQ7KxgpPyp0+DQQEf5vPpmzCRl14x2sp2v5LpCYCjrAx03mkBAbWwGF9eUoIk8YVcDFuJRIeYttg==',
+    //   referrerpolicy:'no-referrer',
+    //   src:'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js'
+    // })
+  
+    add_to_head("script",{
+      id:'markdown',
+      crossorigin:'anonymous',
+      integrity:'sha512-uwSxMaa/W7dmSIXEd07BMVymisMRRUS/Pr5a76AquekKKu9HWn4rBiCd+ZtwqnoijAJvttdrz8krzP26kZjg0Q==',
+      referrerpolicy:'no-referrer',
+      src:'https://cdnjs.cloudflare.com/ajax/libs/marked/4.2.12/marked.min.js'
+    })
+  
+    // add_to_head("script",{
+    //   id:"sjcl",
+    //   crossorigin:'anonymous',
+    //   integrity:'sha512-s0r9TyYSs5CusSDL5s/QEZQZ4DNYLDXx0S+imS+SHR9mw0Yd0Z5KNS9dw7levSp7GpjOZu/bndds3FEDrKd8dg==',
+    //   referrerpolicy:'no-referrer',
+    //   src:'https://cdnjs.cloudflare.com/ajax/libs/sjcl/1.0.8/sjcl.min.js'
+    // })
+  
+    load_js_from_blog_post("firebase-js","module")
+  
+
+
+
 
     console.log("starting")
     const url_params = get_params()
@@ -21,10 +69,10 @@ async function initialize(platform="web"){
 
 
 async function get_url(page_path) {
-    const PAGE_URL = new URL(window.location)
+    const page_url = new URL(window.location)
 
     if (GLOBALS.blogger) {
-      return `${PAGE_URL.protocol}//${PAGE_URL.host}/2022/02/${await bloggerId(page_path)}.html`
+      return `${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(page_path)}.html`
     } else {
       return page_path
     }
@@ -53,8 +101,6 @@ function blog_link_handler(evt){
       new_path.shift()
       current_path.pop()
     }
-    
-    console.log("loading relative link not yet supported", current_path, new_path, ) 
     
     load_page(current_path.concat(new_path).join("/"))
   }
@@ -100,33 +146,34 @@ async function load_page(page_path){
 
 // return the id of a blogger post based on its page_path
 async function bloggerId(page_path) {
-    const msgUint8 = new TextEncoder().encode(page_path); // encode as (utf-8) Uint8Array
-    const hashBuffer = await crypto.subtle.digest("SHA-1", msgUint8); // hash the page_path
-    const hashArray = Array.from(new Uint8Array(hashBuffer)); // convert buffer to byte array
-    const hashHex = hashArray
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join(""); // convert bytes to hex string
-    let hash36=""    
-    // encode blocks of 10 characters at a time to base 36
-    for(let x=0;x<4;x++){
-        hash36+=parseInt(hashHex.substring(x*10, x*10+10),16).toString(36)
-    }
-    return hash36;
+  const msgUint8 = new TextEncoder().encode(page_path); // encode as (utf-8) Uint8Array
+  const hashBuffer = await crypto.subtle.digest("SHA-1", msgUint8); // hash the page_path
+  const hashArray = Array.from(new Uint8Array(hashBuffer)); // convert buffer to byte array
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join(""); // convert bytes to hex string
+  let hash36=""    
+  // encode blocks of 10 characters at a time to base 36
+  for(let x=0;x<4;x++){
+    hash36+=parseInt(hashHex.substring(x*10, x*10+10),16).toString(36)
+  }
+  return hash36;
 }
 
 
 function get_params(query_string) {
-    if (!query_string) {
-      query_string = PAGE_URL.search
-    }
-    const url_params_array = query_string.split("?").join("").split("&")
-    const url_params = {}
-  
-    for (let x = 0; x < url_params_array.length; x++) {
-      // returns the params from the url as an object
-      const temp = url_params_array[x].split("=")
-      url_params[decodeURI(temp[0])] = decodeURI(temp[1])
-    }
-    return url_params
+  const page_url = new URL(window.location)
+  if (!query_string) {
+    query_string = page_url.search
+  }
+  const url_params_array = query_string.split("?").join("").split("&")
+  const url_params = {}
+
+  for (let x = 0; x < url_params_array.length; x++) {
+    // returns the params from the url as an object
+    const temp = url_params_array[x].split("=")
+    url_params[decodeURI(temp[0])] = decodeURI(temp[1])
+  }
+  return url_params
 }
   
