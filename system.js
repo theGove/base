@@ -6,13 +6,6 @@ const GLOBALS={
 async function initialize(platform="web"){
   GLOBALS.blogger=platform==="blogger"
   console.log("document",document)
-  //google material icons
-  add_to_head("link",{
-    id:"google-fonts",
-    href:'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200',
-    rel:'stylesheet'
-  })
-
 
   add_to_head("script",{
     id:'markdown',
@@ -65,6 +58,7 @@ async function get_url(page_path) {
     const page_url = new URL(window.location)
 
     if (GLOBALS.blogger) {
+      console.log ("url",`${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(page_path)}.html`)
       return `${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(page_path)}.html`
     } else {
       return page_path
@@ -116,7 +110,7 @@ async function load_page(page_path, destination_tag_or_tag_id){
     if (GLOBALS.blogger) {
         const contentDelimiter="==~~--FiLe"+"-"+"CoNtEnTs--~~=="
         raw_page = raw_page.split(contentDelimiter)[1]
-        raw_page = decodeHtml(raw_page)
+        //raw_page = decodeHtml(raw_page)
     }
 
     const doc = parser.parseFromString(raw_page, "text/html")
@@ -131,11 +125,16 @@ async function load_page(page_path, destination_tag_or_tag_id){
     // }
 
     console.log("doc",doc)
+    
     if(document.body){
       // the document has a body tag, replace current body with it
       doc.body.dataset.pagePath=page_path
-      const head=document.head
-      document.body.parentNode.replaceChildren(head, doc.body)
+      //const head=document.head
+      
+      console.log("doc.body.children",doc.body.children)
+      document.body.remove()
+      document.head.parentNode.append(doc.body)
+      //debugger
     }else{
       tag(destination_tag_or_tag_id).replaceChildren(doc)
     }
@@ -188,7 +187,11 @@ function get_params(query_string) {
 async function load_js(web_path, script_type) {
   const response = await fetch(await get_url(web_path))
   let source = await response.text();
-  if (GLOBALS.blogger) {source = atob(source)}
+
+  if (GLOBALS.blogger) {
+    const contentDelimiter="==~~--FiLe"+"-"+"CoNtEnTs--~~=="
+    source = atob(source.split(contentDelimiter)[1])
+  }
   js_tag_id=web_path.split("/").join("-")
   let js_tag = document.getElementById(js_tag_id)
 
@@ -228,7 +231,7 @@ async function add_to_head(tag_name, attributes) {
   }
 }
 
-function htmlDecode(input) {
+function decodeHtml(input) {
   var doc = new DOMParser().parseFromString(input, "text/html");
   return doc.documentElement.textContent;
 }
@@ -249,7 +252,9 @@ async function load_css(web_path) {
   const response = await fetch(await get_url(web_path))
   let source = await response.text();
   if(GLOBALS.blogger){
-    source = decodeHtml(post_body)
+    const contentDelimiter="==~~--FiLe"+"-"+"CoNtEnTs--~~=="
+    source = decodeHtml(source.split(contentDelimiter)[1])
+  
   }
   
   const css = document.createElement(`style`)
