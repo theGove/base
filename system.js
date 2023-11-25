@@ -4,14 +4,41 @@ const GLOBALS={
 
 
 async function initialize(platform="web"){
-    GLOBALS.blogger=platform==="blogger"
-    console.log("document",document)
-    //google material icons
-    add_to_head("link",{
-      id:"google-fonts",
-      href:'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200',
-      rel:'stylesheet'
-    })
+  GLOBALS.blogger=platform==="blogger"
+  console.log("document",document)
+  //google material icons
+  add_to_head("link",{
+    id:"google-fonts",
+    href:'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200',
+    rel:'stylesheet'
+  })
+
+
+  add_to_head("script",{
+    id:'markdown',
+    crossorigin:'anonymous',
+    integrity:'sha512-uwSxMaa/W7dmSIXEd07BMVymisMRRUS/Pr5a76AquekKKu9HWn4rBiCd+ZtwqnoijAJvttdrz8krzP26kZjg0Q==',
+    referrerpolicy:'no-referrer',
+    src:'https://cdnjs.cloudflare.com/ajax/libs/marked/4.2.12/marked.min.js'
+  })
+
+  initialize_app()
+}    
+
+async function initialize_app(platform="web"){
+  // wait to be sure the initialize things have loaded
+
+  if( //typeof firebase==='undefined'      ||
+      //typeof Prism?.highlightAll==='undefined' ||
+      //typeof sjcl?.encrypt==='undefined' ||
+      typeof marked==='undefined' 
+      
+  ){
+    log("caught")
+    setTimeout(initialize_app, 100)
+    return
+
+  }
 
 
     // ------------  load interface  ------------------
@@ -228,4 +255,10 @@ async function load_css(web_path) {
   const css = document.createElement(`style`)
   css.innerHTML = source
   document.head.appendChild(css)
+}
+
+function log(...args){
+  // use this to log only in development mode
+  if(!globalThis.blogger)console.log(...args)
+  //console.log(...args)
 }
