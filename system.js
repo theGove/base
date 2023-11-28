@@ -34,22 +34,24 @@ async function initialize_app(platform="web"){
   }
 
 
-    // ------------  load interface  ------------------
-    load_css("interface/interface.css")
-    load_js("interface/interface.js")
+  load_js("lib/load_libs")
+
+  // ------------  load interface  ------------------
+  load_css("interface/interface.css")
+  load_js("interface/interface.js")
 
 
-    console.log("starting")
-    const url_params = get_params()
-    console.log("url_params",url_params)
+  console.log("starting")
+  const url_params = get_params()
+  console.log("url_params",url_params)
 
-    let page_path=null
-    if(url_params.page){
-      page_path = url_params.page
-    }else{
-      page_path="interface/index.html"
-    }
-    await load_page(page_path)
+  let page_path=null
+  if(url_params.page){
+    page_path = url_params.page
+  }else{
+    page_path="interface/index.html"
+  }
+  await load_page(page_path)
 }
 
 
