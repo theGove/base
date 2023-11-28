@@ -50,7 +50,6 @@ async function initialize_app(platform="web"){
       page_path="interface/index.html"
     }
     await load_page(page_path)
-    
 }
 
 
@@ -64,6 +63,7 @@ async function get_url(page_path) {
       return page_path
     }
   }
+
 function blog_link_handler(evt){
   console.log("at link handler", evt.target.getAttribute("href"))
   const link=evt.target.getAttribute("href")

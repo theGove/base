@@ -8,8 +8,13 @@
 async function get_system(){  
     // coded for local development.  Do not post this function to the blog
     const url = new URL(window.location)
-    console.log("now fetching",`${url.protocol}//${url.host}/engine/system.js`)
-    const response = await fetch(`${url.protocol}//${url.host}/engine/system.js`)
+    let engine = url.href.split("/")
+    engine[engine.length-1]="engine"
+    engine.push("system.js")
+    engine = engine.join("/")
+    console.log("now fetching",engine)
+
+    const response = await fetch(engine)
     const page = await response.text();
   
     const js = document.createElement(`script`)
