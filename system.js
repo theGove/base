@@ -52,6 +52,11 @@ async function initialize_app(platform="web"){
     page_path="interface/index.html"
   }
   await load_page(page_path)
+
+  // now the interface is loaded, build the table of contents
+  const response = await fetch(await get_url(web_path))
+  const raw_toc = await response.text();
+
 }
 
 
@@ -107,40 +112,40 @@ async function get_page_content(page_path){
 }
 
 async function load_page(page_path, destination_tag_or_tag_id){
-    let raw_page = await get_page_content(page_path);  
-    const parser = new DOMParser();
-    if (GLOBALS.blogger) {
-        const contentDelimiter="==~~--FiLe"+"-"+"CoNtEnTs--~~=="
-        raw_page = raw_page.split(contentDelimiter)[1]
-        //raw_page = decodeHtml(raw_page)
-    }
+  let raw_page = await get_page_content(page_path);  
+  const parser = new DOMParser();
+  if (GLOBALS.blogger) {
+      const contentDelimiter="==~~--FiLe"+"-"+"CoNtEnTs--~~=="
+      raw_page = raw_page.split(contentDelimiter)[1]
+      //raw_page = decodeHtml(raw_page)
+  }
 
-    const doc = parser.parseFromString(raw_page, "text/html")
+  const doc = parser.parseFromString(raw_page, "text/html")
 
-    //if (GLOBALS.blogger || true) {
-      // add event listener to links on blog
-    for(const element of doc.getElementsByTagName('a')) {
-        console.log("link handler", element)
-        element.onclick = blog_link_handler
-    }
+  //if (GLOBALS.blogger || true) {
+    // add event listener to links on blog
+  for(const element of doc.getElementsByTagName('a')) {
+      console.log("link handler", element)
+      element.onclick = blog_link_handler
+  }
 
-    // }
+  // }
 
-    console.log("doc",doc)
+  console.log("doc",doc)
+  
+  if(document.body){
+    // the document has a body tag, replace current body with it
+    doc.body.dataset.pagePath=page_path
+    //const head=document.head
     
-    if(document.body){
-      // the document has a body tag, replace current body with it
-      doc.body.dataset.pagePath=page_path
-      //const head=document.head
-      
-      console.log("doc.body.children",doc.body.children)
-      document.body.remove()
-      document.head.parentNode.append(doc.body)
-      //debugger
-    }else{
-      tag(destination_tag_or_tag_id).replaceChildren(doc)
-    }
-    
+    console.log("doc.body.children",doc.body.children)
+    document.body.remove()
+    document.head.parentNode.append(doc.body)
+    //debugger
+  }else{
+    tag(destination_tag_or_tag_id).replaceChildren(doc)
+  }
+  
 
 
 }
