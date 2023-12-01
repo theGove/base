@@ -3,7 +3,7 @@ const GLOBALS={
 }
 
 
-async function initialize(platform="web"){
+async function initialize(platform="web",mode){
   GLOBALS.blogger=platform==="blogger"
   console.log("document",document)
 
@@ -15,11 +15,12 @@ async function initialize(platform="web"){
     src:'https://cdnjs.cloudflare.com/ajax/libs/marked/4.2.12/marked.min.js'
   })
 
-  initialize_app()
+  initialize_app(mode)
 }    
 
-async function initialize_app(platform="web"){
+async function initialize_app(mode){
   // wait to be sure the initialize things have loaded
+  console.log("mode",mode)
 
   if( //typeof firebase==='undefined'      ||
       //typeof Prism?.highlightAll==='undefined' ||
@@ -28,18 +29,55 @@ async function initialize_app(platform="web"){
       
   ){
     log("caught")
-    setTimeout(initialize_app, 100)
+    setTimeout(()=>{
+      initialize_app(mode);
+    }, 100)
     return
 
   }
 
 
-  load_js("lib/load_libs")
+  // ------------  load libraries  ------------------
+  load_js("lib/load_libs.js")
+
+  // ------------  choose between book and API  ------------------
+
+  if(mode==="?api"){
+    open_api()
+  }else{
+    open_book()
+  }
+
+}
+
+async function open_api(){
+
+  Slick.createReceiver(async event=>{
+    console.log("api-data", event.data)
+    if(event.data.mode==="get-page"){
+        console.log("getting page")
+        // this is a request for a page
+        response = await fetch(await get_url(event.data.web_path))
+        return  await response.text();
+
+    }
+
+    
+    return {
+        message: "Blogger API: " + event.data.a,
+        value: 1,
+        cool: true
+    }
+})
+document.body.replaceChildren("Book API")
+}
+
+async function open_book(){
 
   // ------------  load interface  ------------------
   load_css("interface/interface.css")
   load_js("interface/interface.js")
-
+  
 
   console.log("starting")
   const url_params = get_params()
@@ -54,8 +92,8 @@ async function initialize_app(platform="web"){
   await load_page(page_path)
 
   // now the interface is loaded, build the table of contents
-  const response = await fetch(await get_url(web_path))
-  const raw_toc = await response.text();
+  //const response = await fetch(await get_url(web_path))
+  //const raw_toc = await response.text();
 
 }
 
@@ -64,12 +102,12 @@ async function get_url(page_path) {
     const page_url = new URL(window.location)
 
     if (GLOBALS.blogger) {
-      console.log ("url",`${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(page_path)}.html`)
+      console.log ("url",page_path,`${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(page_path)}.html`)
       return `${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(page_path)}.html`
     } else {
       return page_path
     }
-  }
+}
 
 function blog_link_handler(evt){
   console.log("at link handler", evt.target.getAttribute("href"))
@@ -105,7 +143,7 @@ function blog_link_handler(evt){
 
 async function get_page_content(page_path){
   const url = await get_url(page_path)
-  console.log("url", url)
+  console.log("url", page_path, url)
   const response = await fetch(url)
   return await response.text();  
 
@@ -253,6 +291,22 @@ function tag(tag_or_id) {
 }
 
 
+async function get_page(web_path, host){
+  // gets a page from a web server current blogger, or api
+  // host is the protocol and host name of desired server, blank for current
+
+  let response
+  if(host){
+    return await api_request({mode:"get-page",webPath:web_path}, host + "?api")
+  }else{
+    response = await fetch(await get_url(web_path))
+    return  await response.text();
+  }
+  
+
+
+}
+
 async function load_css(web_path) {
   // gets css that is stored in a post and load it
 
@@ -327,4 +381,45 @@ const Slick = {
       }
   }()
 }
+
+async function api_request(message_object, api_url){
+  //call the specified api, creating the iframe if it is the first call to this api
+  //api url is the domain dame where where the api is located.
+  const frame_id=btoa(api_url.split("?")[0])
+  let iframe=document.getElementById(frame_id) 
+
+  // if the iframe has successfully received a response from the API, just use it
+  if( iframe?.dataset?.status==="verified"){
+      return await Slick.requester.post(iframe.contentWindow, message_object, "*")
+  }
+
+  // if we just created the iframe, the handler from it's content will not have loaded, set up
+  // a race to see if the response comes back with in 100 milliseconds, if not try again
+
+  iframe = document.createElement("iframe")
+  iframe.id = frame_id
+  iframe.src = api_url
+  iframe.style.display="none"
+  document.body.append(iframe)
+  
+
+  let result=null
+  let delay=100
+  while (!result){
+      delay=delay*1.5  // increase the time we wait  by 50% for each iteration in case we are on a slow connection
+      //console.log ("waiting",delay,"milliseconds" )
+      result = await Promise.race([
+          Slick.requester.post(iframe.contentWindow, message_object, "*"),
+          new Promise((resolve, reject) => {
+              let wait = setTimeout(() => {
+              clearTimeout(wait);
+              resolve(null);
+              }, delay)
+          })
+      ])
+  }
+  iframe.dataset.status="verified"
+  return result
+}
+
 
