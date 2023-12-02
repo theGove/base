@@ -1,192 +1,147 @@
-const GLOBALS={
-  blogger:false
+const GLOBALS = {
+  blogger: false,   // used to tell of we are running on blogger
+  api: false,       // used to tell of we are acting as a book or an api
+  devMode: false    // used to tell if we are running on local host
 }
 
 
-async function initialize(platform="web",mode){
-  GLOBALS.blogger=platform==="blogger"
-  console.log("document",document)
+async function initialize(platform = "web") {
+  GLOBALS.blogger = platform === "blogger"
+  GLOBALS.api = window.location.search === "?api"
+  GLOBALS.devMode = window.location.hostname.toLowerCase().startsWith('localhost')
 
-  add_to_head("script",{
-    id:'markdown',
-    crossorigin:'anonymous',
-    integrity:'sha512-uwSxMaa/W7dmSIXEd07BMVymisMRRUS/Pr5a76AquekKKu9HWn4rBiCd+ZtwqnoijAJvttdrz8krzP26kZjg0Q==',
-    referrerpolicy:'no-referrer',
-    src:'https://cdnjs.cloudflare.com/ajax/libs/marked/4.2.12/marked.min.js'
+
+  add_to_head("script", {
+    id: 'markdown',
+    crossorigin: 'anonymous',
+    integrity: 'sha512-uwSxMaa/W7dmSIXEd07BMVymisMRRUS/Pr5a76AquekKKu9HWn4rBiCd+ZtwqnoijAJvttdrz8krzP26kZjg0Q==',
+    referrerpolicy: 'no-referrer',
+    src: 'https://cdnjs.cloudflare.com/ajax/libs/marked/4.2.12/marked.min.js'
   })
 
-  initialize_app(mode)
-}    
+  initialize_app()
+}
 
-async function initialize_app(mode){
+async function initialize_app() {
   // wait to be sure the initialize things have loaded
-  console.log("mode",mode)
 
-  if( //typeof firebase==='undefined'      ||
-      //typeof Prism?.highlightAll==='undefined' ||
-      //typeof sjcl?.encrypt==='undefined' ||
-      typeof marked==='undefined' 
-      
-  ){
+  if ( //typeof firebase==='undefined'      ||
+    //typeof Prism?.highlightAll==='undefined' ||
+    //typeof sjcl?.encrypt==='undefined' ||
+    typeof marked === 'undefined'
+
+  ) {
     log("caught")
-    setTimeout(()=>{
-      initialize_app(mode);
-    }, 100)
+    setTimeout(initialize_app, 100)
     return
 
   }
 
 
   // ------------  load libraries  ------------------
-  load_js("lib/load_libs.js")
+  load_page({webPath:"lib/load_libs.js",localRequest:true})
 
   // ------------  choose between book and API  ------------------
 
-  if(mode==="?api"){
+  if (GLOBALS.api) {
     open_api()
-  }else{
+  } else {
     open_book()
   }
 
 }
 
-async function open_api(){
+async function open_api() {
 
-  Slick.createReceiver(async event=>{
+  Slick.createReceiver(async event => {
     console.log("api-data", event.data)
-    if(event.data.mode==="get-page"){
-        console.log("getting page")
-        // this is a request for a page
-        response = await fetch(await get_url(event.data.web_path))
-        return  await response.text();
-
+    if (event.data.mode === "get-page") {
+      console.log("getting page", event.data.webPath)
+      // this is a request for a page
+      const source=await get_page_content({webPath:event.data.webPath,localRequest:true})
+      console.log(window.location.host, source)
+      return {source}
     }
-
-    
     return {
-        message: "Blogger API: " + event.data.a,
-        value: 1,
-        cool: true
+      message: "Blogger API: " + event.data.a,
+      value: 1,
+      cool: true
     }
-})
-document.body.replaceChildren("Book API")
+  })
+  document.body.replaceChildren("Book API")
 }
 
-async function open_book(){
+async function open_book() {
 
   // ------------  load interface  ------------------
-  load_css("interface/interface.css")
-  load_js("interface/interface.js")
-  
+  load_page({webPath:"interface/interface.css",localRequest:true})
+  load_page({webPath:"interface/interface.js",localRequest:true})
+
 
   console.log("starting")
   const url_params = get_params()
-  console.log("url_params",url_params)
+  console.log("url_params", url_params)
 
-  let page_path=null
-  if(url_params.page){
-    page_path = url_params.page
-  }else{
-    page_path="interface/index.html"
+  let webPath = null
+  if (url_params.page) {
+    webPath = url_params.page
+  } else {
+    webPath = "interface/index.html"
   }
-  await load_page(page_path)
+  await load_page({webPath,localRequest:true})
 
   // now the interface is loaded, build the table of contents
-  //const response = await fetch(await get_url(web_path))
+  //const response = await fetch(await get_url(webPath))
   //const raw_toc = await response.text();
 
 }
 
 
 async function get_url(page_path) {
-    const page_url = new URL(window.location)
+  const page_url = new URL(window.location)
 
-    if (GLOBALS.blogger) {
-      console.log ("url",page_path,`${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(page_path)}.html`)
-      return `${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(page_path)}.html`
-    } else {
-      return page_path
-    }
+  if (GLOBALS.blogger) {
+    console.log("url", page_path, `${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(page_path)}.html`)
+    return `${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(page_path)}.html`
+  } else {
+    return page_path
+  }
 }
 
-function blog_link_handler(evt){
+function blog_link_handler(evt) {
   console.log("at link handler", evt.target.getAttribute("href"))
-  const link=evt.target.getAttribute("href")
-  if(link.split("?")[0].includes(":")){
+  const link = evt.target.getAttribute("href")
+  if (link.split("?")[0].includes(":")) {
     // this is a link with a protocol. just follow it
     return true
-  }else if(link.startsWith("/")){
+  } else if (link.startsWith("/")) {
     //this is a absolute path on this site
-    load_page(link.substring(1))// get rid of the initial slash because we don't prefix with slash in pageId
-  }else{
+    load_page({webPath:link.substring(1)})// get rid of the initial slash because we don't prefix with slash in pageId
+  } else {
     // must be a relative path on this site
     // need to have a way to figure the path of the current page
-    const current_path=document.body.dataset.pagePath.split("/")
+    const current_path = document.body.dataset.pagePath.split("/")
     current_path.pop()
-    new_path=link.split("/")
+    new_path = link.split("/")
 
-    while(new_path[0]==="."){      
+    while (new_path[0] === ".") {
       new_path.shift()
     }
 
-    while(new_path[0]===".."){
+    while (new_path[0] === "..") {
       new_path.shift()
       current_path.pop()
     }
-    
-    load_page(current_path.concat(new_path).join("/"))
+
+    load_page({webPath:current_path.concat(new_path).join("/")})
   }
   evt.preventDefault();
   return false
-  
-}
-
-async function get_page_content(page_path){
-  const url = await get_url(page_path)
-  console.log("url", page_path, url)
-  const response = await fetch(url)
-  return await response.text();  
 
 }
 
-async function load_page(page_path, destination_tag_or_tag_id){
-  let raw_page = await get_page_content(page_path);  
-  const parser = new DOMParser();
-  if (GLOBALS.blogger) {
-      const contentDelimiter="==~~--FiLe"+"-"+"CoNtEnTs--~~=="
-      raw_page = raw_page.split(contentDelimiter)[1]
-      //raw_page = decodeHtml(raw_page)
-  }
-
-  const doc = parser.parseFromString(raw_page, "text/html")
-
-  //if (GLOBALS.blogger || true) {
-    // add event listener to links on blog
-  for(const element of doc.getElementsByTagName('a')) {
-      console.log("link handler", element)
-      element.onclick = blog_link_handler
-  }
-
-  // }
-
-  console.log("doc",doc)
-  
-  if(document.body){
-    // the document has a body tag, replace current body with it
-    doc.body.dataset.pagePath=page_path
-    //const head=document.head
-    
-    console.log("doc.body.children",doc.body.children)
-    document.body.remove()
-    document.head.parentNode.append(doc.body)
-    //debugger
-  }else{
-    tag(destination_tag_or_tag_id).replaceChildren(doc)
-  }
-  
 
 
-}
 
 // return the id of a blogger post based on its page_path
 async function bloggerId(page_path) {
@@ -196,10 +151,10 @@ async function bloggerId(page_path) {
   const hashHex = hashArray
     .map((b) => b.toString(16).padStart(2, "0"))
     .join(""); // convert bytes to hex string
-  let hash36=""    
+  let hash36 = ""
   // encode blocks of 10 characters at a time to base 36
-  for(let x=0;x<4;x++){
-    hash36+=parseInt(hashHex.substring(x*10, x*10+10),16).toString(36)
+  for (let x = 0; x < 4; x++) {
+    hash36 += parseInt(hashHex.substring(x * 10, x * 10 + 10), 16).toString(36)
   }
   return hash36;
 }
@@ -220,47 +175,15 @@ function get_params(query_string) {
   }
   return url_params
 }
-  
+
 
 /** 
  * gets js that is stored as a base-64 encoded string (if fetched in production) 
  * in a post and loads it to the <header> tag.
  * If the tag already exists, then it will override the js tag with the content of the file. 
- * @param {string} web_path the name of the file we want to get. It gets converted into 
+ * @param {string} webPath the name of the file we want to get. It gets converted into 
  * a URL.
  */
-async function load_js(web_path, script_type) {
-  const response = await fetch(await get_url(web_path))
-  let source = await response.text();
-
-  if (GLOBALS.blogger) {
-    const contentDelimiter="==~~--FiLe"+"-"+"CoNtEnTs--~~=="
-    source = atob(source.split(contentDelimiter)[1])
-  }
-  js_tag_id=web_path.split("/").join("-")
-  let js_tag = document.getElementById(js_tag_id)
-
-
-  if (!js_tag) {
-    js_tag = document.createElement(`script`)
-    js_tag.setAttribute("id", js_tag_id)
-    if(script_type){
-      js_tag.setAttribute("type", script_type)
-    }else{
-      const type_attr = source.match(/@type=["'](.*)['"]@/)
-      if (type_attr) {
-        js_tag.setAttribute("type", type_attr[1])
-      }
-    }
-    js_tag.async = false;
-    document.getElementsByTagName('head')[0].appendChild(js_tag)
-  }
-  js_tag.addEventListener('load', function() {
-    //log("hi hi hi");
-  });
-
-  js_tag.replaceChildren(source)
-}
 
 
 
@@ -269,7 +192,7 @@ async function add_to_head(tag_name, attributes) {
   let tag_id_header = document.getElementById(attributes.id)
   if (!tag_id_header) {
     tag_id_header = document.createElement(tag_name)
-    for(const [attr_name, attr_val] of Object.entries(attributes)){
+    for (const [attr_name, attr_val] of Object.entries(attributes)) {
       tag_id_header.setAttribute(attr_name, attr_val)
     }
     document.head.appendChild(tag_id_header)
@@ -283,49 +206,20 @@ function decodeHtml(input) {
 
 // send a tag or the id of the tag.  returns the relevant tag
 function tag(tag_or_id) {
-  if(typeof tag_or_id === 'string'){
+  if (typeof tag_or_id === 'string') {
     return document.getElementById(tag_or_id)
-  }else{
+  } else {
     return tag_or_id
   }
 }
 
 
-async function get_page(web_path, host){
-  // gets a page from a web server current blogger, or api
-  // host is the protocol and host name of desired server, blank for current
-
-  let response
-  if(host){
-    return await api_request({mode:"get-page",webPath:web_path}, host + "?api")
-  }else{
-    response = await fetch(await get_url(web_path))
-    return  await response.text();
-  }
-  
 
 
-}
 
-async function load_css(web_path) {
-  // gets css that is stored in a post and load it
-
-  const response = await fetch(await get_url(web_path))
-  let source = await response.text();
-  if(GLOBALS.blogger){
-    const contentDelimiter="==~~--FiLe"+"-"+"CoNtEnTs--~~=="
-    source = decodeHtml(source.split(contentDelimiter)[1])
-  
-  }
-  
-  const css = document.createElement(`style`)
-  css.innerHTML = source
-  document.head.appendChild(css)
-}
-
-function log(...args){
+function log(...args) {
   // use this to log only in development mode
-  if(!GLOBALS.blogger)console.log(...args)
+  if (!GLOBALS.blogger) console.log(...args)
   //console.log(...args)
 }
 
@@ -335,62 +229,65 @@ function log(...args){
 const Slick = {
   /**
    * Adds and listener for the message event. You should only call this method once.
-   * @param {(event: MessageEvent<*>)=> Object.<string, any>} handlerCallback 
+   * @param {(event: MessageEvent<*>)=> Promise<Object.<string, any>>} handlerCallback 
    */
   createReceiver(handlerCallback) {
-      window.addEventListener("message",
-          event => {
-              try {
-                  const data = handlerCallback(event)
-                  event.source.postMessage({ ...data, __slick_id__: event.data.__slick_id__ }, event.origin)
-              } catch (error) {
-                  event.source.postMessage({ __slick_error__: error, id: event.data.id }, event.origin)
-              }
-          }
-      );
+    window.addEventListener("message",
+      async event => {
+        try {
+          const data = await handlerCallback(event)
+          event.source.postMessage({ ...data, __slick_id__: event.data.__slick_id__ }, event.origin)
+        } catch (error) {
+          event.source.postMessage({ __slick_error__: error, id: event.data.id }, event.origin)
+        }
+      }
+    );
   },
 
   /**
    * An object that has the post method, used for making cross origin requests across i-frames. 
    */
   requester: function () {
-      const requests = {}
-      window.addEventListener(
-          "message",
-          (e) => {
-              if (requests[e.data.__slick_id__]) {
-                  if (e.data.__slick_error__) {
-                      requests[e.data.__slick_id__].reject(e.data.__slick_error__)
-                  } else {
-                      requests[e.data.__slick_id__].resolve(e.data)
-                  }
-              }
-          },
-      );
-      return {
-          async post(contentWindow, data, origin = "*") {
-              const __slick_id__ = Math.random()
-              const promise = new Promise((resolve, reject) => {
-                  requests[__slick_id__] = { resolve, reject }
-              })
-              contentWindow.postMessage({ ...data, __slick_id__ }, origin)
-              const result = await promise
-              delete requests[__slick_id__]
-              return result
+    const requests = {}
+    window.addEventListener(
+      "message",
+      (e) => {
+        if (requests[e.data.__slick_id__]) {
+          console.log("---at reqester",e.data)
+          if (e.data.__slick_error__) {
+            requests[e.data.__slick_id__].reject(e.data.__slick_error__)
+          } else {
+            requests[e.data.__slick_id__].resolve(e.data)
           }
+        }
+      },
+    );
+    return {
+      async post(contentWindow, data, origin = "*") {
+        const __slick_id__ = Math.random()
+        const promise = new Promise((resolve, reject) => {
+          requests[__slick_id__] = { resolve, reject }
+        })
+        contentWindow.postMessage({ ...data, __slick_id__ }, origin)
+        const result = await promise
+        delete requests[__slick_id__]
+        console.log("-------------------------------------result",result)
+        return result
       }
+    }
   }()
 }
 
-async function api_request(message_object, api_url){
+async function api_request(message_object, api_url) {
   //call the specified api, creating the iframe if it is the first call to this api
-  //api url is the domain dame where where the api is located.
-  const frame_id=btoa(api_url.split("?")[0])
-  let iframe=document.getElementById(frame_id) 
+  //api url is the domain name where where the api is located.
+  //debugger
+  const frame_id = btoa(api_url.split("?")[0])
+  let iframe = document.getElementById(frame_id)
 
   // if the iframe has successfully received a response from the API, just use it
-  if( iframe?.dataset?.status==="verified"){
-      return await Slick.requester.post(iframe.contentWindow, message_object, "*")
+  if (iframe?.dataset?.status === "verified") {
+    return await Slick.requester.post(iframe.contentWindow, message_object, "*")
   }
 
   // if we just created the iframe, the handler from it's content will not have loaded, set up
@@ -399,27 +296,149 @@ async function api_request(message_object, api_url){
   iframe = document.createElement("iframe")
   iframe.id = frame_id
   iframe.src = api_url
-  iframe.style.display="none"
+  //iframe.style.display = "none"
   document.body.append(iframe)
-  
 
-  let result=null
-  let delay=100
-  while (!result){
-      delay=delay*1.5  // increase the time we wait  by 50% for each iteration in case we are on a slow connection
-      //console.log ("waiting",delay,"milliseconds" )
-      result = await Promise.race([
-          Slick.requester.post(iframe.contentWindow, message_object, "*"),
-          new Promise((resolve, reject) => {
-              let wait = setTimeout(() => {
-              clearTimeout(wait);
-              resolve(null);
-              }, delay)
-          })
-      ])
+
+  let result = null
+  let delay = 100
+  while (!result) {
+    delay = delay * 1.5  // increase the time we wait  by 50% for each iteration in case we are on a slow connection
+    //console.log ("waiting",delay,"milliseconds" )
+    result = await Promise.race([
+      Slick.requester.post(iframe.contentWindow, message_object, "*"),
+      new Promise((resolve, reject) => {
+        let wait = setTimeout(() => {
+          clearTimeout(wait);
+          resolve(null);
+        }, delay)
+      })
+    ])
   }
-  iframe.dataset.status="verified"
+  iframe.dataset.status = "verified"
   return result
 }
 
 
+async function get_page_content(parameters) {
+  // get the content of a file using fetch.  if on blogger, it will return 
+  // just the post content, properly decoded.
+  const params = Object.assign({webPath:"interface/index.html", localRequest: false }, parameters)
+
+  //response=await load_page({webPath:"basis-dev/content/junk7.html", returnContent:true})
+  
+  const page_url = new URL(window.location)
+  let request_url = ""
+  let source = ""
+  if (GLOBALS.blogger) {
+    if (params.localRequest) {
+      // request blog page without iframe
+      console.log("params.webPath",params.webPath)
+      const response = await fetch(`${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(params.webPath)}.html`)
+      source = getRealContentFromBlogPost(await response.text())
+    } else {
+      // request through an iframe
+      //debugger
+      const webPath_array = params.webPath.split("/")
+      const host = webPath_array.shift()
+      const host_name_array = page_url.hostname.split(".")
+      host_name_array.shift()
+      host_name_array.unshift(host)
+      
+      request_url = `${page_url.protocol}//${host}.${host_name_array.join(".")}/2022/02/${await bloggerId(webPath_array.join("/"))}.html`
+      source = await api_request({ mode: "get-page", webPath: webPath_array.join("/") }, `${page_url.protocol}//${host_name_array.join(".")}?api`)
+    }
+    // decode the source if necessary
+    if (params.webPath.endsWith(".js")) {
+      source = atob(source)
+    }
+    return source
+  } else if (GLOBALS.devMode) {
+    if (params.localRequest) {
+      request_url = params.webPath
+    } else {
+      request_url = "/" + params.webPath
+    }
+    const response = await fetch(request_url)
+    return await response.text()
+  } else {
+    // production non-blogger (hopefully we never get here)
+    // need to think about what the structure would be the structure on aws or github pages 
+  }
+
+  function getRealContentFromBlogPost(source) {
+    return source.split("==~~--FiLe" + "-" + "CoNtEnTs--~~==")[1]
+  }
+
+}
+
+
+
+async function load_page(parameters) {
+  const params = Object.assign({webPath:"interface/index.html", destinationTag: null, localRequest: false },parameters);
+  console.log("parameters", parameters)
+  console.log("params", params)
+  let source = await get_page_content(params);
+
+  if(params.returnContent){
+    // send content back to caller
+    return source
+  }
+  
+
+  if(params.webPath.endsWith(".css")){
+    // write CSS to the head
+    const css = document.createElement(`style`)
+    css.innerHTML = source
+    document.head.appendChild(css)
+    return
+  }
+
+  if(params.webPath.endsWith(".js")){
+    // write JS to head 
+
+    js_tag_id = params.webPath.split("/").join("-")
+    let js_tag = document.getElementById(js_tag_id)
+  
+    if (!js_tag) {
+      js_tag = document.createElement(`script`)
+      js_tag.setAttribute("id", js_tag_id)
+      if (params.scriptType) {
+        js_tag.setAttribute("type", params.scriptType)
+      } else {
+        const type_attr = source.match(/@type=["'](.*)['"]@/)
+        if (type_attr) {
+          js_tag.setAttribute("type", type_attr[1])
+        }
+      }
+      js_tag.async = false;
+      document.head.appendChild(js_tag)
+    }
+    // js_tag.addEventListener('load', function () {
+    //   //log("hi hi hi");
+    // });
+  
+    js_tag.replaceChildren(source)
+  
+
+    return
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(source, "text/html")
+
+  console.log("doc", doc)
+  if (params.destinationTag) {
+      tag(params.destinationTag).replaceChildren(doc)
+  } else if (document.body) {
+    // the document has a body tag, replace current body with it
+    doc.body.dataset.pagePath = params.webPath
+    document.body.remove()
+    document.head.parentNode.append(doc.body)
+  } else {
+    // document does not have a body, but no destination was specified, replace the body with the doc
+    document.body.remove()
+    document.head.parentNode.append(doc)
+  }
+
+}
