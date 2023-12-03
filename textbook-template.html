@@ -1,0 +1,211 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html b:version='2' class='v2' expr:dir='data:blog.languageDirection' xmlns='http://www.w3.org/1999/xhtml' xmlns:b='http://www.google.com/2005/gml/b' xmlns:data='http://www.google.com/2005/gml/data' xmlns:expr='http://www.google.com/2005/gml/expr'>
+<head><title>SQL-Book</title>
+<link id="google-fonts" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js" integrity="sha512-CSBhVREyzHAjAFfBlIBakjoRUKp5h7VSweP0InR/pAJyptH7peuhCsqAI/snV+TwZmXZqoUklpXp6R6wMnYf5Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>  
+<script> 
+  let BOOK_DATA=null // and object to hold all book data, title, toc, libs needed, etc
+  const Slick = {
+    createReceiver(handlerCallback) {
+      window.addEventListener("message",
+        async event => {
+          try {
+            debugger
+            const data = await handlerCallback(event)
+            event.source.postMessage({ ...data, __slick_id__: event.data.__slick_id__ }, event.origin)
+          } catch (error) {
+            event.source.postMessage({ __slick_error__: error, id: event.data.id }, event.origin)
+          }
+        }
+      );
+    },
+    requester: function () {
+      const requests = {}
+      window.addEventListener(
+        "message",
+        (e) => {
+          if (requests[e.data.__slick_id__]) {
+            log("---at reqester",e.data)
+            if (e.data.__slick_error__) {
+              requests[e.data.__slick_id__].reject(e.data.__slick_error__)
+            } else {
+              requests[e.data.__slick_id__].resolve(e.data)
+            }
+          }
+        },
+      );
+      return {
+        async post(contentWindow, data, origin = "*") {
+          const __slick_id__ = Math.random()
+          const promise = new Promise((resolve, reject) => {
+            requests[__slick_id__] = { resolve, reject }
+          })
+          contentWindow.postMessage({ ...data, __slick_id__ }, origin)
+          const result = await promise
+          delete requests[__slick_id__]
+          return result
+        }
+      }
+    }()
+  }
+
+  function log(...args) {
+    console.log(window.location.href,...args)
+  }
+
+  async function api_request(message_object, api_url) {
+    //call the specified api, creating the iframe if it is the first call to this api
+    //api url is the domain name where where the api is located.
+    //debugger
+    const frame_id = btoa(api_url.split("?")[0])
+    let iframe = document.getElementById(frame_id)
+
+    // if the iframe has successfully received a response from the API, just use it
+    if (iframe?.dataset?.status === "verified") {
+      return await Slick.requester.post(iframe.contentWindow, message_object, "*")
+    }
+
+    // if we just created the iframe, the handler from it's content will not have loaded, set up
+    // a race to see if the response comes back with in 100 milliseconds, if not try again
+    log("making iframe")
+    iframe = document.createElement("iframe")
+    iframe.id = frame_id
+    iframe.src = api_url
+    iframe.style.display = "none"
+    iframe.style.height = "600px"
+    document.body.append(iframe)
+
+
+    let result = null
+    let delay = 100
+    while (!result) {
+      delay = delay * 1.5  // increase the time we wait  by 50% for each iteration in case we are on a slow connection
+      result = await Promise.race([
+        Slick.requester.post(iframe.contentWindow, message_object, "*"),
+        new Promise((resolve, reject) => {
+          let wait = setTimeout(() => {
+            clearTimeout(wait);
+            resolve(null);
+          }, delay)
+        })
+      ])
+    }
+    iframe.dataset.status = "verified"
+    return result
+  }  
+  
+  async function api_request(message_object, api_url) {
+    //call the specified api, creating the iframe if it is the first call to this api
+    //api url is the domain name where where the api is located.
+    //debugger
+    const frame_id = btoa(api_url.split("?")[0])
+    let iframe = document.getElementById(frame_id)
+
+    // if the iframe has successfully received a response from the API, just use it
+    if (iframe?.dataset?.status === "verified") {
+      return await Slick.requester.post(iframe.contentWindow, message_object, "*")
+    }
+
+    // if we just created the iframe, the handler from it's content will not have loaded, set up
+    // a race to see if the response comes back with in 100 milliseconds, if not try again
+
+    iframe = document.createElement("iframe")
+    iframe.id = frame_id
+    iframe.src = api_url
+    iframe.style.display = "none"
+    document.body.append(iframe)
+
+
+    let result = null
+    let delay = 100
+    while (!result) {
+      delay = delay * 1.5  // increase the time we wait  by 50% for each iteration in case we are on a slow connection
+      //log ("waiting",delay,"milliseconds" )
+      result = await Promise.race([
+        Slick.requester.post(iframe.contentWindow, message_object, "*"),
+        new Promise((resolve, reject) => {
+          let wait = setTimeout(() => {
+            clearTimeout(wait);
+            resolve(null);
+          }, delay)
+        })
+      ])
+    }
+    iframe.dataset.status = "verified"
+    return result
+  }
+  
+  
+async function initialize_system(){  
+    const url = new URL(window.location)
+    log("url=====>",url)
+  
+    BOOK_DATA=jsyaml.load(document.querySelector(".post-body").innerText) 
+  
+    // request the api frame from system
+      
+    const [engine, template] = await Promise.all([
+      api_request({ mode: "get-page", pageId:"1" }, 'https://atlas-engine.blogspot.com/2022/02/api.html'), 
+      api_request({ mode: "get-page", pageId:"gamma"}, 'https://atlas-templates.blogspot.com/2022/02/api.html')
+    ]);
+
+
+
+
+    // const engine   = await api_request({ mode: "get-page", pageId:"1" }, 'https://atlas-engine.blogspot.com/2022/02/api.html')
+    // const template = await api_request({ mode: "get-page", pageId:"gamma"}, 'https://atlas-templates.blogspot.com/2022/02/api.html')
+
+    
+    template.source=jsyaml.load(template.source) 
+    
+
+    // log("engine from remote blog",engine.source)
+    // log("template html from remote blog",template.html)
+    // log("template css from remote blog",template.css)
+    // log("template script from remote blog",template.script)
+      
+    
+    // integrate the template CSS 
+    const css = document.createElement(`style`)
+    css.innerHTML = atob(template.source.css)
+    document.head.appendChild(css)
+  
+    // integrate the template JS 
+    let js = document.createElement(`script`)
+    js.id="template-script"
+    js.replaceChildren(atob(template.source.script))
+    document.getElementsByTagName(`head`)[0].appendChild(js)    
+
+
+
+    // render the template HTML
+    document.body.innerHTML=atob(template.source.html)
+
+    // bring in the main system
+    js = document.createElement(`script`)
+    js.id="system-js"
+    js.replaceChildren(atob(engine.source))
+    document.getElementsByTagName(`head`)[0].appendChild(js)    
+    
+    initialize("blogger")
+    
+    
+
+
+  
+} 
+  
+  
+</script>                
+<style>#navbar-iframe, .post{display:none}</style>      
+</head>
+<body onload='initialize_system()'>
+<Blogger><div class="post"><div class="post-body"><$BlogItemBody$></div></div></Blogger>
+<div style="display: grid;place-items: center;height: 100vh;">
+    <div style="width: 50%;">
+        Loading your book...    
+    </div>
+</div>
+
+</body>
+</html>

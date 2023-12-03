@@ -1,11 +1,13 @@
 const GLOBALS = {
   blogger: false,   // used to tell of we are running on blogger
+  api: false,       // used to tell of we are acting as a book or an api
   devMode: false    // used to tell if we are running on local host
 }
 
 
 async function initialize(platform = "web") {
   GLOBALS.blogger = platform === "blogger"
+  GLOBALS.api = window.location.search === "?api"
   GLOBALS.devMode = window.location.hostname.toLowerCase().startsWith('localhost')
 
 
@@ -35,30 +37,58 @@ async function initialize_app() {
 
   }
 
-  
+
   // ------------  load libraries  ------------------
-  //  load_page({webPath:"lib/load_libs.js",localRequest:true})
+  load_page({webPath:"lib/load_libs.js",localRequest:true})
 
   // ------------  choose between book and API  ------------------
 
+  if (GLOBALS.api) {
+    open_api()
+  } else {
+    open_book()
+  }
 
-  // ------------  load interface  ------------------ should already be loaded
-  // load_page({webPath:"interface/interface.css",localRequest:true})
-  // load_page({webPath:"interface/interface.js",localRequest:true})
+}
+
+async function open_api() {
+
+  Slick.createReceiver(async event => {
+    console.log("api-data", event.data)
+    if (event.data.mode === "get-page") {
+      console.log("getting page", event.data.webPath)
+      // this is a request for a page
+      const source=await get_page_content({webPath:event.data.webPath,localRequest:true})
+      console.log(window.location.host, source)
+      return {source}
+    }
+    return {
+      message: "Blogger API: " + event.data.a,
+      value: 1,
+      cool: true
+    }
+  })
+  document.body.replaceChildren("Book API")
+}
+
+async function open_book() {
+
+  // ------------  load interface  ------------------
+  load_page({webPath:"interface/interface.css",localRequest:true})
+  load_page({webPath:"interface/interface.js",localRequest:true})
 
 
-  log("starting")
-  initialize_book()
+  console.log("starting")
   const url_params = get_params()
-  log("url_params", url_params)
+  console.log("url_params", url_params)
 
-  // let webPath = null
-  // if (url_params.page) {
-  //   webPath = url_params.page
-  // } else {
-  //   webPath = "interface/index.html"
-  // }
-  // await load_page({webPath,localRequest:true})
+  let webPath = null
+  if (url_params.page) {
+    webPath = url_params.page
+  } else {
+    webPath = "interface/index.html"
+  }
+  await load_page({webPath,localRequest:true})
 
   // now the interface is loaded, build the table of contents
   //const response = await fetch(await get_url(webPath))
@@ -71,7 +101,7 @@ async function get_url(page_path) {
   const page_url = new URL(window.location)
 
   if (GLOBALS.blogger) {
-    log("url", page_path, `${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(page_path)}.html`)
+    console.log("url", page_path, `${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(page_path)}.html`)
     return `${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(page_path)}.html`
   } else {
     return page_path
@@ -79,7 +109,7 @@ async function get_url(page_path) {
 }
 
 function blog_link_handler(evt) {
-  log("at link handler", evt.target.getAttribute("href"))
+  console.log("at link handler", evt.target.getAttribute("href"))
   const link = evt.target.getAttribute("href")
   if (link.split("?")[0].includes(":")) {
     // this is a link with a protocol. just follow it
@@ -189,11 +219,105 @@ function tag(tag_or_id) {
 
 function log(...args) {
   // use this to log only in development mode
-  //if (!GLOBALS.blogger) log(...args)
-  console.log(window.location.host, ...args)
+  if (!GLOBALS.blogger) console.log(...args)
+  //console.log(...args)
 }
 
+/**
+ * An Object for handling Cross origin i-frame communication
+ */
+const Slick = {
+  /**
+   * Adds and listener for the message event. You should only call this method once.
+   * @param {(event: MessageEvent<*>)=> Promise<Object.<string, any>>} handlerCallback 
+   */
+  createReceiver(handlerCallback) {
+    window.addEventListener("message",
+      async event => {
+        try {
+          const data = await handlerCallback(event)
+          event.source.postMessage({ ...data, __slick_id__: event.data.__slick_id__ }, event.origin)
+        } catch (error) {
+          event.source.postMessage({ __slick_error__: error, id: event.data.id }, event.origin)
+        }
+      }
+    );
+  },
 
+  /**
+   * An object that has the post method, used for making cross origin requests across i-frames. 
+   */
+  requester: function () {
+    const requests = {}
+    window.addEventListener(
+      "message",
+      (e) => {
+        if (requests[e.data.__slick_id__]) {
+          console.log("---at reqester",e.data)
+          if (e.data.__slick_error__) {
+            requests[e.data.__slick_id__].reject(e.data.__slick_error__)
+          } else {
+            requests[e.data.__slick_id__].resolve(e.data)
+          }
+        }
+      },
+    );
+    return {
+      async post(contentWindow, data, origin = "*") {
+        const __slick_id__ = Math.random()
+        const promise = new Promise((resolve, reject) => {
+          requests[__slick_id__] = { resolve, reject }
+        })
+        contentWindow.postMessage({ ...data, __slick_id__ }, origin)
+        const result = await promise
+        delete requests[__slick_id__]
+        console.log("-------------------------------------result",result)
+        return result
+      }
+    }
+  }()
+}
+
+async function api_request(message_object, api_url) {
+  //call the specified api, creating the iframe if it is the first call to this api
+  //api url is the domain name where where the api is located.
+  //debugger
+  const frame_id = btoa(api_url.split("?")[0])
+  let iframe = document.getElementById(frame_id)
+
+  // if the iframe has successfully received a response from the API, just use it
+  if (iframe?.dataset?.status === "verified") {
+    return await Slick.requester.post(iframe.contentWindow, message_object, "*")
+  }
+
+  // if we just created the iframe, the handler from it's content will not have loaded, set up
+  // a race to see if the response comes back with in 100 milliseconds, if not try again
+
+  iframe = document.createElement("iframe")
+  iframe.id = frame_id
+  iframe.src = api_url
+  //iframe.style.display = "none"
+  document.body.append(iframe)
+
+
+  let result = null
+  let delay = 100
+  while (!result) {
+    delay = delay * 1.5  // increase the time we wait  by 50% for each iteration in case we are on a slow connection
+    //console.log ("waiting",delay,"milliseconds" )
+    result = await Promise.race([
+      Slick.requester.post(iframe.contentWindow, message_object, "*"),
+      new Promise((resolve, reject) => {
+        let wait = setTimeout(() => {
+          clearTimeout(wait);
+          resolve(null);
+        }, delay)
+      })
+    ])
+  }
+  iframe.dataset.status = "verified"
+  return result
+}
 
 
 async function get_page_content(parameters) {
@@ -209,7 +333,7 @@ async function get_page_content(parameters) {
   if (GLOBALS.blogger) {
     if (params.localRequest) {
       // request blog page without iframe
-      log("params.webPath",params.webPath)
+      console.log("params.webPath",params.webPath)
       const response = await fetch(`${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(params.webPath)}.html`)
       source = getRealContentFromBlogPost(await response.text())
     } else {
@@ -252,8 +376,8 @@ async function get_page_content(parameters) {
 
 async function load_page(parameters) {
   const params = Object.assign({webPath:"interface/index.html", destinationTag: null, localRequest: false },parameters);
-  log("parameters", parameters)
-  log("params", params)
+  console.log("parameters", parameters)
+  console.log("params", params)
   let source = await get_page_content(params);
 
   if(params.returnContent){
@@ -303,7 +427,7 @@ async function load_page(parameters) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(source, "text/html")
 
-  log("doc", doc)
+  console.log("doc", doc)
   if (params.destinationTag) {
       tag(params.destinationTag).replaceChildren(doc)
   } else if (document.body) {

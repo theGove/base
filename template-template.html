@@ -1,0 +1,462 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="<$BlogLanguageDirection$>">
+
+<head>
+  <title><$BlogPageTitle$></title>
+
+  <$BlogMetaData$>
+
+  <style type="text/css">
+/*
+-----------------------------------------------
+Blogger Template Style
+Name:     Rounders
+Date:     27 Feb 2004
+----------------------------------------------- */
+
+
+body {
+  background:#aba;
+  margin:0;
+  padding:20px 10px;
+  text-align:center;
+  font:x-small/1.5em "Trebuchet MS",Verdana,Arial,Sans-serif;
+  color:#333;
+  font-size/* */:/**/small;
+  font-size: /**/small;
+  }
+
+  em{background-color:red;color:yellow; border-radius:2px;padding:0 2px;font-style:normal}
+  strong{background-color:#777;color:#aga; border-radius:2px;padding:0 2px;}
+/* Page Structure
+----------------------------------------------- */
+/* The images which help create rounded corners depend on the 
+   following widths and measurements. If you want to change 
+   these measurements, the images will also need to change.
+   */
+@media all {
+  #content {
+    width:90%;
+    min-width:600px;
+    margin:0 auto;
+    text-align:left;
+    }
+  #main {
+    min-width:600px;
+    float:left;
+    margin:15px 0 0;
+    color:#000;
+    line-height:1.5em;
+    }
+  #main3 {
+    padding:0;
+    }
+  }
+@media handheld {
+  #content {
+    width:90%;
+    }
+  #main {
+    width:100%;
+    float:none;
+    background:#fff;
+    }
+  #main3 {
+    background:none;
+    padding:0;
+    }
+  }
+
+
+/* Links
+----------------------------------------------- */
+a:link {
+  color:#258;
+  }
+a:visited {
+  color:#666;
+  }
+a:hover {
+  color:#c63;
+  }
+a img {
+  border-width:0;
+  }
+
+
+/* Blog Header
+----------------------------------------------- */
+@media all {
+  #header {
+    background-color:#456;
+    margin:0 0 0;
+    padding:8px 0 0;
+    color:#fff;
+    border-radius:5px;
+    }
+  #header div {
+    padding:0 15px 8px;
+    }
+  }
+@media handheld {
+  #header {
+    background:#456;
+    }
+  #header div {
+    background:none;
+    }
+  }
+#blog-title {
+  margin:0;
+  padding:10px 30px 5px;
+  font-size:200%;
+  line-height:1.2em;
+  }
+#blog-title a {
+  text-decoration:none;
+  color:#fff;
+  }
+#description {
+  margin:0;
+  padding:5px 30px 10px;
+  font-size:94%;
+  line-height:1.5em;
+  }
+.copy{
+  margin-top:-25px;
+  text-align:right;
+  margin-bottom:5px  
+  }   
+
+
+/* Posts
+----------------------------------------------- */
+.post {
+  padding:0 13px;
+  border-width:1px 0;
+  background-color:whitesmoke;
+  border-radius:5px;
+  margin-bottom:1rem;
+  }
+.post-title {
+  margin:0;
+  font-size:135%;
+  line-height:1.5em;
+  background:url("https://resources.blogblog.com/blogblog/data/rounders/icon_arrow.gif") no-repeat 10px .5em;
+  display:block;
+  border-width:0 1px 1px;
+  padding:2px 14px 2px 29px;
+  color:#333;
+  }
+a.title-link, .post-title strong {
+  text-decoration:none;
+  display:block;
+  }
+a.title-link:hover {
+  background-color:#ded;
+  color:#000;
+  }
+.post-body {
+  padding-bottom:1rem;
+  }
+html>body .post-body {
+  border-bottom-width:0;
+  }
+.post p {
+  margin:0 0 .75em;
+  }
+p.post-footer {
+  background:#ded;
+  margin:0;
+  padding:2px 14px 2px 29px;
+  border-width:1px;
+  border-bottom:1px solid #eee;
+  font-size:100%;
+  line-height:1.5em;
+  color:#666;
+  text-align:right;
+  }
+html>body p.post-footer {
+  border-bottom-color:transparent;
+  }
+p.post-footer em {
+  display:block;
+  float:left;
+  text-align:left;
+  font-style:normal;
+  }
+.post img {
+  margin:0 0 5px 0;
+  padding:4px;
+  border:1px solid #ccc;
+  }
+blockquote {
+  margin:.75em 0;
+  border-width:1px 0;
+  padding:5px 15px;
+  color:#666;
+  }
+.post blockquote p {
+  margin:.5em 0;
+  }
+
+    .code{
+        overflow-wrap: anywhere;        
+        padding-left:1rem;
+        padding-top:0.5rem;
+		white-space: pre-wrap;
+        font-family: monospace;
+        color:lightgreen;
+        font-weight:bold;
+        background-color:#444;
+        padding-bottom:.5rem;
+    
+    }
+
+  </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js" integrity="sha512-CSBhVREyzHAjAFfBlIBakjoRUKp5h7VSweP0InR/pAJyptH7peuhCsqAI/snV+TwZmXZqoUklpXp6R6wMnYf5Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>  
+
+<script>
+var postTitle = new Array();
+var postUrl = new Array();
+var postMp3 = new Array();
+var postDate = new Array();
+var postYear = new Array();
+var postMonth = new Array();
+var postYearMonth = new Array();
+var postYearMonth2 = new Array();
+var postTanggal = new Array();
+var postLabels = new Array();
+var postBaru = new Array();
+var sortBy = "titleasc";
+var tocLoaded = false;
+var numChars = 250;
+var postFilter = "";
+var numberfeed = 0;
+var month2 = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+function loadtoc(a) {
+      log("at toc1")
+
+    function b() {
+        if ("entry" in a.feed) {
+            var d = a.feed.entry.length;
+            numberfeed = d;
+            ii = 0;
+            for (var h = 0; h < d; h++) {
+                var m = a.feed.entry[h];
+                var e = m.title.$t;
+                var l = m.published.$t.substring(0, 10);
+                var p = m.published.$t.substring(5, 7);
+                var g = m.published.$t.substring(8, 10);
+                var n = month2[parseInt(p, 10) - 1] + " " + m.published.$t.substring(0, 4);
+                var c = "/" + m.published.$t.substring(0, 4) + "_" + p + "_01_archive.html";
+                var j;
+                for (var f = 0; f < m.link.length; f++) {
+                    if (m.link[f].rel == "alternate") {
+                        j = m.link[f].href;
+                        break
+                    }
+                }
+                var o = "";
+                for (var f = 0; f < m.link.length; f++) {
+                    if (m.link[f].rel == "enclosure") {
+                        o = m.link[f].href;
+                        break
+                    }
+                }
+                postTitle.push(e);
+                postDate.push(l);
+                postUrl.push(j);
+                postYearMonth.push(n);
+                postYearMonth2.push(c);
+                postTanggal.push(g)
+            }
+        }
+    }
+    b();
+    //displayToc2();
+
+}
+  
+async function initialize_system(){
+  const url = new URL(window.location)
+  log("url",url)
+  if(url.pathname.endsWith("api.html")){
+    const js = document.createElement(`script`)
+    js.id="api-js"
+    js.replaceChildren(atob(document.querySelector(`.code`).innerText))
+    document.getElementsByTagName(`head`)[0].appendChild(js)    
+    initialize("blogger")
+  }else{
+    displayToc2()
+  }
+}  
+
+
+function displayToc2() {
+  
+    var a = 0;
+    var b = 0;
+    while (b < postTitle.length) {
+        temp1 = postYearMonth[b];
+        //document.write("<p/>");
+        //document.write('<p><a href="' + postYearMonth2[b] + '">' + temp1 + "</a></p><ul>");
+        firsti = a;
+        do {
+          
+          let newOption = new Option(postTitle[a],a);
+          const select = document.querySelector('#scriptlist'); 
+          if(postUrl[a] === window.location.href){
+             newOption.setAttribute('selected', true);
+          }
+          select.add(newOption,undefined);
+          
+            //document.write("<li>");
+            //document.write("[" + postTanggal[a] + '] <a href="' + postUrl[a] + '">' + postTitle[a] + "</a>");
+            //document.write("</li>");
+            a = a + 1
+        } while (postYearMonth[a] == temp1);
+        b = a;
+        //document.write("</ul>");
+        if (b > postTitle.length) {
+            break
+        }
+    }
+    document.querySelector('#scriptlist').style.visibility="visible"
+};
+  
+  
+  function copy(button) {
+    const elem = button.parentNode.nextElementSibling
+    const data=jsyaml.load(elem.innerText)
+    
+    const clipbpard=document.getElementById("clipboard")
+    clipbpard.value=atob(data[button.dataset.tag])
+    var range = document.createRange();
+    range.selectNode(clipbpard);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.execCommand("copy");
+    window.getSelection().removeAllRanges();
+    
+    
+    
+    
+  }
+  
+  function copy_old(button) {
+    const elem = button.parentNode.nextElementSibling
+    var range = document.createRange();
+    range.selectNode(elem);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.execCommand("copy");
+    window.getSelection().removeAllRanges();
+  }
+  
+  function log(...args) {
+    // use this to log only in development mode
+    //if (!GLOBALS.blogger) log(...args)
+    console.log(window.location.host, ...args)
+  }
+
+
+  
+</script>
+    // load the data for the blog posts
+    <script src="/feeds/posts/default?max-results=500&alt=json-in-script&callback=loadtoc"></script>
+</head>
+
+
+
+<body onload="initialize_system()">
+
+
+
+<!-- Begin #content - Centers all content and provides edges for floated columns -->
+
+<div id="content">
+
+
+
+<!-- Blog Header -->
+
+<div id="header"><div>
+
+  <h1 id="blog-title">
+    <ItemPage><a href="<$BlogURL$>"></ItemPage>
+<$BlogTitle$>
+<ItemPage></a></ItemPage>
+  </h1>
+  <table id="description"><tr><td style="width:100%"><$BlogDescription$></td><td>
+  <select id="scriptlist" style="visibility:hidden" onchange="window.location.href = postUrl[this.value]">
+  </select>
+  </td></tr></table>
+</div></div>
+
+
+
+
+
+<!-- Begin #main - Contains main-column blog content -->
+
+<div id="main"><div id="main3">
+<Blogger>
+  
+  
+  
+  
+  
+  
+  
+         <!-- Begin .post -->
+
+  <div class="post"><a name="<$BlogItemNumber$>"></a>
+
+     <BlogItemTitle>
+ <BlogItemUrl><a href="<$BlogItemUrl$>" title="external link" class="title-link"></BlogItemUrl>
+    <h3 class="post-title">
+ <$BlogItemTitle$>
+    </h3>
+ <BlogItemUrl></a></BlogItemUrl>
+    </BlogItemTitle>
+
+        <div class="post-body">
+        <div class="copy">
+          <button onclick=copy(this) data-tag="html">Copy HTML</button>
+          <button onclick=copy(this) data-tag="css">Copy CSS</button>
+          <button onclick=copy(this) data-tag="script">Copy Script</button>
+        </div>
+        <div class="code"><$BlogItemBody$></div></div></div>
+
+  <!-- End .post -->
+
+</Blogger>
+<textarea id="clipboard" style="white-space:pre;height:1px;text-overflow:clip; overflow:scroll;"></textarea>    
+</div>
+
+<!-- End #main -->
+  
+  
+  
+</div></div>
+</div>
+  
+  
+
+  
+  
+  
+</div>
+
+<!-- End #content -->
+
+
+
+</body>
+
+</html>

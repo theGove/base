@@ -11,24 +11,21 @@ async function initialize(platform = "web") {
   GLOBALS.devMode = window.location.hostname.toLowerCase().startsWith('localhost')
 
   Slick.createReceiver(async event => {
-    console.log("api-data", event.data)
+    log("api-data", event.data)
     if (event.data.mode === "get-page") {
       // this is a request for a page
       let source=null
       if(event.data.webPath){
-        console.log("getting page", event.data.webPath)
+        log("getting page", event.data.webPath)
         source=await get_page_content({webPath:event.data.webPath,localRequest:true})
       }else{
-        console.log("getting page", event.data.pageId)
+        log("getting page", event.data.pageId)
         source=await get_page_content({pageId:event.data.pageId,localRequest:true})
       }
-      console.log(window.location.host, source)
       return {source}
     }
     return {
-      message: "Blogger API: " + event.data.a,
-      value: 1,
-      cool: true
+      message: "Blogger API: External event. No need to process result",
     }
   })
   document.body.replaceChildren("API: " + window.location.host)
@@ -49,7 +46,7 @@ async function bloggerId(page_path) {
     hash36 += parseInt(hashHex.substring(x * 10, x * 10 + 10), 16).toString(36)
   }
   return hash36;
-}
+}log
 
 
 
@@ -75,8 +72,12 @@ const Slick = {
     window.addEventListener("message",
       async event => {
         try {
-          const data = await handlerCallback(event)
-          event.source.postMessage({ ...data, __slick_id__: event.data.__slick_id__ }, event.origin)
+          if(event.source){
+            log( "createReceiver", event)
+            //debugger
+            const data = await handlerCallback(event)
+            event.source.postMessage({ ...data, __slick_id__: event.data.__slick_id__ }, event.origin)
+          }// otherwise, there is no source, Gove thinks there is no reason to try to postMessage
         } catch (error) {
           event.source.postMessage({ __slick_error__: error, id: event.data.id }, event.origin)
         }
@@ -93,7 +94,7 @@ const Slick = {
       "message",
       (e) => {
         if (requests[e.data.__slick_id__]) {
-          console.log("---at reqester",e.data)
+          log("---at reqester",e.data)
           if (e.data.__slick_error__) {
             requests[e.data.__slick_id__].reject(e.data.__slick_error__)
           } else {
@@ -111,7 +112,7 @@ const Slick = {
         contentWindow.postMessage({ ...data, __slick_id__ }, origin)
         const result = await promise
         delete requests[__slick_id__]
-        console.log("-------------------------------------result",result)
+        log("-------------------------------------result",result)
         return result
       }
     }
@@ -144,7 +145,7 @@ async function api_request(message_object, api_url) {
   let delay = 100
   while (!result) {
     delay = delay * 1.5  // increase the time we wait  by 50% for each iteration in case we are on a slow connection
-    //console.log ("waiting",delay,"milliseconds" )
+    //log ("waiting",delay,"milliseconds" )
     result = await Promise.race([
       Slick.requester.post(iframe.contentWindow, message_object, "*"),
       new Promise((resolve, reject) => {
@@ -169,22 +170,23 @@ async function get_page_content(parameters) {
   
   const page_url = new URL(window.location)
   let request_url = ""
-  let source = ""
+  let page_source = ""
   if (GLOBALS.blogger) {
     if (params.localRequest) {
+      
       // request blog page without iframe
       let response=null
-      debugger
+      //debugger
       if(params.webPath){
         const api_fetch_url=`${page_url.protocol}//${page_url.host}/2022/02/${await bloggerId(params.webPath)}.html`
-        console.log("api_fetch_url",api_fetch_url)
+        log("direct request with webPath", api_fetch_url)
         response = await fetch(api_fetch_url)
       }else{
         const api_fetch_url=`${page_url.protocol}//${page_url.host}/2022/02/${params.pageId}.html`
-        console.log("api_fetch_url",api_fetch_url)
+        log("direct request with pageId", api_fetch_url)
         response = await fetch(api_fetch_url)
       }
-      source = getRealContentFromBlogPost(await response.text())
+      page_source = getRealContentFromBlogPost(await response.text())
     } else {
       // request through an iframe
       //debugger
@@ -195,13 +197,14 @@ async function get_page_content(parameters) {
       host_name_array.unshift(host)
       
       request_url = `${page_url.protocol}//${host}.${host_name_array.join(".")}/2022/02/${await bloggerId(webPath_array.join("/"))}.html`
-      source = await api_request({ mode: "get-page", webPath: webPath_array.join("/") }, `${page_url.protocol}//${host_name_array.join(".")}?api`)
+      log("iframe api request",api_fetch_url)
+      page_source = await api_request({ mode: "get-page", webPath: webPath_array.join("/") }, `${page_url.protocol}//${host_name_array.join(".")}?api`)
     }
     // decode the source if necessary
     // if (params.webPath.endsWith(".js")) {
     //   source = atob(source)
     // }
-    return source
+    return page_source
   } else if (GLOBALS.devMode) {
     if (params.localRequest) {
       request_url = params.webPath
@@ -216,7 +219,10 @@ async function get_page_content(parameters) {
   }
 
   function getRealContentFromBlogPost(source) {
-    return source.split("==~~--FiLe" + "-" + "CoNtEnTs--~~==")[1]
+    //    return source.split("==~~--FiLe" + "-" + "CoNtEnTs--~~==")[1]
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(source, "text/html")
+    return doc.querySelector(".code").innerText
   }
 
 }
@@ -225,8 +231,8 @@ async function get_page_content(parameters) {
 
 async function load_page(parameters) {
   const params = Object.assign({webPath:"interface/index.html", destinationTag: null, localRequest: false },parameters);
-  console.log("parameters", parameters)
-  console.log("params", params)
+  log("parameters", parameters)
+  log("params", params)
   let source = await get_page_content(params);
 
   if(params.returnContent){
@@ -276,7 +282,7 @@ async function load_page(parameters) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(source, "text/html")
 
-  console.log("doc", doc)
+  log("doc", doc)
   if (params.destinationTag) {
       tag(params.destinationTag).replaceChildren(doc)
   } else if (document.body) {
@@ -290,4 +296,10 @@ async function load_page(parameters) {
     document.head.parentNode.append(doc)
   }
 
+}
+
+function log(...args) {
+  // use this to log only in development mode
+  //if (!GLOBALS.blogger) log(...args)
+  console.log(window.location.href,...args)
 }
